@@ -16,6 +16,17 @@ namespace backend
             builder.Services.AddDbContext<EcommerceDbContext>(options =>
                 options.UseMySQL(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+            // Add CORS
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAngular", policy =>
+                {
+                    policy.WithOrigins("https://localhost:4200", "http://localhost:4200")
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
+
             builder.Services.AddControllers();
 
             builder.Services.AddOpenApi();
@@ -30,6 +41,8 @@ namespace backend
             }
 
             app.UseHttpsRedirection();
+
+            app.UseCors("AllowAngular");
 
             app.UseAuthorization();
 

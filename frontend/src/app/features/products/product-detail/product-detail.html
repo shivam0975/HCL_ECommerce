@@ -1,1 +1,59 @@
-<p>product-detail works!</p>
+<div class="product-detail-container">
+  @if (loading()) {
+    <p class="loading">Loading product...</p>
+  } @else if (error()) {
+    <p class="error">{{ error() }}</p>
+    <a routerLink="/products" class="back-link">Back to Products</a>
+  } @else if (product()) {
+    <div class="product-content">
+      <a routerLink="/products" class="back-link">← Back to Products</a>
+      
+      <div class="product-header">
+        <h1>{{ product()?.name }}</h1>
+      </div>
+      
+      <div class="product-details">
+        <div class="product-main">
+          <div class="placeholder">Product Image</div>
+          
+          <div class="product-info">
+            <p class="description">{{ product()?.description }}</p>
+            
+            <div class="product-pricing">
+              <div class="price">${{ product()?.price | number: '1.2-2' }}</div>
+              @let stock = product()?.stock;
+              <div class="stock" [class.in-stock]="stock && stock > 0">
+                @if (stock && stock > 0) {
+                  <span>In Stock ({{ stock }} available)</span>
+                } @else {
+                  <span>Out of Stock</span>
+                }
+              </div>
+            </div>
+            
+            <div class="quantity-selector">
+              <label for="quantity">Quantity:</label>
+              <input 
+                type="number" 
+                id="quantity"
+                [ngModel]="quantity()"
+                (ngModelChange)="quantity.set($event)"
+                min="1" 
+                [max]="product()?.stock || 1"
+                class="quantity-input"
+              />
+            </div>
+            
+            <button 
+              (click)="addToCart()" 
+              class="add-to-cart-btn"
+              [disabled]="!product()?.stock || product()?.stock === 0"
+            >
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

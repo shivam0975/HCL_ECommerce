@@ -1,1 +1,164 @@
-<p>checkout works!</p>
+<div class="checkout-container">
+  <div class="checkout-header">
+    <h1>Checkout</h1>
+    <div class="step-indicator">
+      <div [class.active]="currentStep() === 'review'" class="step">
+        <span class="step-number">1</span>
+        <span>Review</span>
+      </div>
+      <div class="step-connector" [class.active]="currentStep() === 'address' || currentStep() === 'payment'"></div>
+      <div [class.active]="currentStep() === 'address' || currentStep() === 'payment'" class="step">
+        <span class="step-number">2</span>
+        <span>Address</span>
+      </div>
+      <div class="step-connector" [class.active]="currentStep() === 'payment'"></div>
+      <div [class.active]="currentStep() === 'payment'" class="step">
+        <span class="step-number">3</span>
+        <span>Payment</span>
+      </div>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  <div class="checkout-content">
+    <!-- Step 1: Review Cart -->
+    @if (currentStep() === 'review') {
+      <div class="checkout-step">
+        <h2>Order Review</h2>
+        <div class="order-summary">
+          @if (cartItems().length === 0) {
+            <p class="empty-cart">Your cart is empty. <a routerLink="/products">Continue shopping</a></p>
+          } @else {
+            <div class="cart-items">
+              @for (item of cartItems(); track item.product.productId) {
+                <div class="cart-item">
+                  <div class="item-info">
+                    <h4>{{ item.product.name }}</h4>
+                    <p class="item-sku">SKU: {{ item.product.productId }}</p>
+                  </div>
+                  <div class="item-quantity">
+                    <span>Qty: {{ item.quantity }}</span>
+                  </div>
+                  <div class="item-price">
+                    <span>${{ ((item.product.price || 0) * item.quantity).toFixed(2) }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="order-total">
+              <div class="total-row">
+                <span>Subtotal:</span>
+                <span>${{ cartTotal.toFixed(2) }}</span>
+              </div>
+              <div class="total-row">
+                <span>Shipping:</span>
+                <span>Free</span>
+              </div>
+              <div class="total-row">
+                <span>Tax:</span>
+                <span>${{ (cartTotal * 0.08).toFixed(2) }}</span>
+              </div>
+              <div class="total-row final">
+                <span>Total:</span>
+                <span>${{ (cartTotal * 1.08).toFixed(2) }}</span>
+              </div>
+            </div>
+
+            <p class="items-count">Total Items: {{ totalItems }}</p>
+          }
+        </div>
+
+        <div class="button-group">
+          <button (click)="continueShipping()" class="btn btn-secondary">Continue Shopping</button>
+          <button (click)="nextStep()" class="btn btn-primary" [disabled]="cartItems().length === 0">
+            Proceed to Address
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Step 2: Shipping Address -->
+    @if (currentStep() === 'address') {
+      <div class="checkout-step">
+        <h2>Shipping Address</h2>
+
+        @if (loading()) {
+          <p class="loading">Loading addresses...</p>
+        } @else {
+          <form [formGroup]="checkoutForm" class="address-selection">
+            @if (addresses().length > 0) {
+              <div class="address-list">
+                <h3>Select Address</h3>
+                @for (addr of addresses(); track addr.addressId) {
+                  <label class="address-option">
+                    <input
+                      type="radio"
+                      [value]="addr.addressId.toString()"
+                      formControlName="addressId"
+                    />
+                    <div class="address-content">
+                      <p class="address-street">{{ addr.address }}</p>
+                      <p class="address-city">{{ addr.city }}, {{ addr.state }} {{ addr.pincode }}</p>
+                    </div>
+                  </label>
+                }
+              </div>
+            }
+          </form>
+        }
+
+        <div class="button-group">
+          <button (click)="prevStep()" class="btn btn-secondary">Back</button>
+          <button
+            (click)="nextStep()"
+            class="btn btn-primary"
+            [disabled]="!checkoutForm.valid || loading()"
+          >
+            Continue to Payment
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Step 3: Payment -->
+    @if (currentStep() === 'payment') {
+      <div class="checkout-step">
+        <h2>Payment</h2>
+        <div class="payment-summary">
+          <div class="summary-item">
+            <span>Subtotal:</span>
+            <span>${{ cartTotal.toFixed(2) }}</span>
+          </div>
+          <div class="summary-item">
+            <span>Tax (8%):</span>
+            <span>${{ (cartTotal * 0.08).toFixed(2) }}</span>
+          </div>
+          <div class="summary-item total">
+            <span>Final Total:</span>
+            <span>${{ (cartTotal * 1.08).toFixed(2) }}</span>
+          </div>
+        </div>
+
+        <div class="payment-info">
+          <p class="payment-note">Payment processing will be handled securely.</p>
+          <p class="payment-status">Status: Pending</p>
+        </div>
+
+        <div class="button-group">
+          <button (click)="prevStep()" class="btn btn-secondary">Back</button>
+          <button
+            (click)="createOrder()"
+            class="btn btn-success"
+            [disabled]="submitting()"
+          >
+            {{ submitting() ? 'Processing...' : 'Place Order' }}
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

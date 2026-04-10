@@ -1,1 +1,66 @@
-<p>cart works!</p>
+<div class="cart-container">
+  <h1>Shopping Cart</h1>
+  
+  @if (cartService.items().length === 0) {
+    <div class="empty-cart">
+      <p>Your cart is empty</p>
+      <a routerLink="/products" class="continue-shopping">Continue Shopping</a>
+    </div>
+  } @else {
+    <div class="cart-content">
+      <table class="cart-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Subtotal</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of cartService.items(); track item.product.productId) {
+            <tr>
+              <td>{{ item.product.name }}</td>
+              <td>${{ item.product.price | number: '1.2-2' }}</td>
+              <td>
+                <input 
+                  type="number" 
+                  [value]="item.quantity" 
+                  (change)="updateQuantity(item.product.productId, +($event.target?.value || 0))"
+                  min="1"
+                  class="quantity-input"
+                />
+              </td>
+              <td>${{ (item.product.price || 0) * item.quantity | number: '1.2-2' }}</td>
+              <td>
+                <button 
+                  (click)="removeItem(item.product.productId)"
+                  class="remove-btn"
+                >
+                  Remove
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      
+      <div class="cart-summary">
+        <div class="summary-row">
+          <span>Total Items:</span>
+          <strong>{{ cartService.totalItems() }}</strong>
+        </div>
+        <div class="summary-row total">
+          <span>Total Price:</span>
+          <strong>${{ cartService.totalPrice() | number: '1.2-2' }}</strong>
+        </div>
+      </div>
+      
+      <div class="cart-actions">
+        <button (click)="clearCart()" class="clear-btn">Clear Cart</button>
+        <a routerLink="/checkout" class="checkout-btn">Proceed to Checkout</a>
+      </div>
+    </div>
+  }
+</div>

@@ -1,1 +1,102 @@
-<p>order-detail works!</p>
+<div class="order-detail-container">
+  <div class="order-header">
+    <button (click)="backToOrders()" class="back-btn">← Back to Orders</button>
+    <h1>Order Details</h1>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="loading">Loading order details...</div>
+  } @else if (order()) {
+    <div class="order-content">
+      <!-- Order Information Section -->
+      <div class="section">
+        <h2>Order Information</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <label>Order ID</label>
+            <p>{{ order()!.orderId }}</p>
+          </div>
+          <div class="info-item">
+            <label>Order Date</label>
+            <p>{{ order()!.createdAt ? (order()!.createdAt | date: 'MMM d, yyyy HH:mm') : 'N/A' }}</p>
+          </div>
+          <div class="info-item">
+            <label>Status</label>
+            <p [class]="'status ' + getStatusClass(order()!.status)">{{ order()!.status | uppercase }}</p>
+          </div>
+          <div class="info-item">
+            <label>Total Amount</label>
+            <p class="amount">${{ order()!.totalAmount?.toFixed(2) || '0.00' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Items Section -->
+      <div class="section">
+        <h2>Order Items</h2>
+        @if (items().length === 0) {
+          <p class="no-items">No items in this order</p>
+        } @else {
+          <div class="items-table">
+            <div class="table-header">
+              <div class="col col-product">Product</div>
+              <div class="col col-quantity">Quantity</div>
+              <div class="col col-price">Unit Price</div>
+              <div class="col col-total">Total</div>
+            </div>
+            @for (item of items(); track item.orderItemId) {
+              <div class="table-row">
+                <div class="col col-product">
+                  <p class="item-name">Product ID: {{ item.productId }}</p>
+                  <p class="item-id">Order Item: {{ item.orderItemId }}</p>
+                </div>
+                <div class="col col-quantity">{{ item.quantity }}</div>
+                <div class="col col-price">${{ item.price?.toFixed(2) || '0.00' }}</div>
+                <div class="col col-total">
+                  <strong>${{ ((item.quantity || 0) * (item.price || 0)).toFixed(2) }}</strong>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Summary Section -->
+      <div class="section summary-section">
+        <h2>Order Summary</h2>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span>Subtotal:</span>
+            <span>${{ order()!.totalAmount?.toFixed(2) || '0.00' }}</span>
+          </div>
+          <div class="summary-item">
+            <span>Tax (8%):</span>
+            <span>${{ ((order()!.totalAmount || 0) * 0.08).toFixed(2) }}</span>
+          </div>
+          <div class="summary-item">
+            <span>Shipping:</span>
+            <span>Free</span>
+          </div>
+          <div class="summary-item total">
+            <span>Total:</span>
+            <span>${{ (((order()!.totalAmount || 0) * 1.08)).toFixed(2) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions Section -->
+      <div class="section actions-section">
+        <button (click)="backToOrders()" class="btn btn-primary">Back to Orders</button>
+      </div>
+    </div>
+  } @else {
+    <div class="no-order">
+      <p>No order found. Please go back and try again.</p>
+      <button (click)="backToOrders()" class="btn btn-primary">Back to Orders</button>
+    </div>
+  }
+</div>

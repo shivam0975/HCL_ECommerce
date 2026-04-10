@@ -1,1 +1,51 @@
-<p>profile works!</p>
+<div class="profile-container">
+  <div class="profile-header">
+    <h1>My Profile</h1>
+    <div class="header-actions">
+      <button (click)="toggleEditMode()" class="btn btn-primary" [disabled]="loading()">
+        {{ editMode() ? 'Cancel' : 'Edit Profile' }}
+      </button>
+      <button (click)="logout()" class="btn btn-danger">Logout</button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="loading">Loading profile...</div>
+  } @else if (user()) {
+    <div class="profile-card">
+      @if (!editMode()) {
+        <div class="profile-view">
+          <div class="profile-field">
+            <label>Name</label>
+            <p>{{ user()!.name }}</p>
+          </div>
+          <div class="profile-field">
+            <label>Email</label>
+            <p>{{ user()!.email }}</p>
+          </div>
+          <div class="profile-field">
+            <label>Member Since</label>
+            <p>{{ user()!.createdAt ? (user()!.createdAt | date: 'MMM d, yyyy') : 'N/A' }}</p>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="alert alert-warning">No profile data available. Please log in.</div>
+  }
+
+  <div class="profile-links">
+    <a routerLink="/orders" class="link-item">
+      <span class="icon">📋</span>
+      <span>View Orders</span>
+    </a>
+    <a routerLink="/cart" class="link-item">
+      <span class="icon">🛒</span>
+      <span>Shopping Cart</span>
+    </a>
+  </div>
+</div>

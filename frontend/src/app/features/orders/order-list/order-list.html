@@ -1,1 +1,46 @@
-<p>order-list works!</p>
+<div class="order-list-container">
+  <h1>Orders</h1>
+  
+  @if (loading()) {
+    <p class="loading">Loading orders...</p>
+  } @else if (error()) {
+    <p class="error">{{ error() }}</p>
+    <button (click)="loadOrders()" class="retry-btn">Retry</button>
+  } @else if (orders().length === 0) {
+    <p class="empty">No orders found</p>
+    <a routerLink="/products" class="continue-shopping">Continue Shopping</a>
+  } @else {
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>User ID</th>
+          <th>Total Amount</th>
+          <th>Status</th>
+          <th>Created Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (order of orders(); track order.orderId) {
+          <tr>
+            <td>{{ order.orderId }}</td>
+            <td>{{ order.userId }}</td>
+            <td>${{ order.totalAmount | number: '1.2-2' }}</td>
+            <td>
+              <span class="status" [class.status-pending]="order.status === 'pending'" 
+                    [class.status-processing]="order.status === 'processing'"
+                    [class.status-completed]="order.status === 'completed'">
+                {{ order.status }}
+              </span>
+            </td>
+            <td>{{ order.createdAt | date: 'short' }}</td>
+            <td>
+              <a [routerLink]="['/orders', order.orderId]" class="view-link">View Details</a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

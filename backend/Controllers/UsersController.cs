@@ -69,6 +69,54 @@ namespace backend.Controllers
             return NoContent();
         }
 
+        [HttpPost("login")]
+        public async Task<ActionResult<LoginResponse>> Login(LoginRequest request)
+        {
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+
+            if (user == null || user.Password != request.Password)
+            {
+                return Unauthorized(new { message = "Invalid email or password." });
+            }
+
+            // Simple token generation (in production, use JWT)
+            var token = Guid.NewGuid().ToString();
+            
+            return Ok(new LoginResponse
+            {
+                UserId = user.UserId,
+                Email = user.Email,
+                Token = token,
+                ExpiresIn = 3600
+            });
+        }
+
+        [HttpPost("register")]
+        public async Task<ActionResult<UserResponse>> Register(CreateUserRequest request)
+        {
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+            var emailExists = await _context.Users.AnyAsync(u => u.Email == normalizedEmail);
+            if (emailExists)
+            {
+                return Conflict(new { message = "Email already exists." });
+            }
+
+            var user = new User
+            {
+                Name = request.Name.Trim(),
+                Email = normalizedEmail,
+                Password = request.Password,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            var response = ToResponse(user);
+            return CreatedAtAction(nameof(GetUser), new { id = user.UserId }, response);
+        }
+
         [HttpPost]
         public async Task<ActionResult<UserResponse>> PostUser(CreateUserRequest request)
         {
@@ -113,6 +161,24 @@ namespace backend.Controllers
             new(user.UserId, user.Name, user.Email, user.CreatedAt);
 
         public record UserResponse(int UserId, string? Name, string? Email, DateTime? CreatedAt);
+
+        public class LoginRequest
+        {
+            [Required]
+            [EmailAddress]
+            public string Email { get; set; } = string.Empty;
+
+            [Required]
+            public string Password { get; set; } = string.Empty;
+        }
+
+        public class LoginResponse
+        {
+            public int UserId { get; set; }
+            public string? Email { get; set; }
+            public string Token { get; set; } = string.Empty;
+            public int ExpiresIn { get; set; }
+        }
 
         public class CreateUserRequest
         {

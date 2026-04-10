@@ -1,1 +1,35 @@
-<p>product-list works!</p>
+<div class="product-list-container">
+  <h1>Products</h1>
+  
+  @if (loading()) {
+    <p class="loading">Loading products...</p>
+  } @else if (error()) {
+    <p class="error">{{ error() }}</p>
+    <button (click)="loadProducts()" class="retry-btn">Retry</button>
+  } @else if (products().length === 0) {
+    <p class="empty">No products available</p>
+  } @else {
+    <div class="products-grid">
+      @for (product of products(); track product.productId) {
+        <div class="product-card">
+          <h3>{{ product.name }}</h3>
+          <p class="description">{{ product.description }}</p>
+          <div class="product-info">
+            <span class="price">${{ product.price | number: '1.2-2' }}</span>
+            <span class="stock">Stock: {{ product.stock }}</span>
+          </div>
+          <div class="actions">
+            <a [routerLink]="['/products', product.productId]" class="detail-link">View Details</a>
+            <button 
+              (click)="addToCart(product)" 
+              class="add-to-cart-btn"
+              [disabled]="!product.stock || product.stock === 0"
+            >
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
