@@ -1,0 +1,39 @@
+# ==========================================
+# Frontend (Angular) Specifics
+# ==========================================
+frontend/node_modules/
+frontend/dist/
+frontend/tmp/
+frontend/out-tsc/
+frontend/bazel-out/
+frontend/.angular/cache/
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-error.log*
+frontend/package-lock.json
+
+# ==========================================
+# Backend (.NET) Specifics
+# ==========================================
+backend/[Bb]in/
+backend/[Oo]bj/
+backend/[Rr]elease/
+backend/[Dd]ebug/
+backend/publish/
+backend/.vs/
+backend/*.user
+backend/*.suo
+backend/*.sln.docstates
+backend/project.lock.json
+backend/appsettings.json
+
+
+# ==========================================
+# General / IDE Specifics
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
