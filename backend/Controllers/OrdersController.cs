@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -22,65 +23,77 @@ namespace backend.Controllers
 
         // GET: api/Orders
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Order>>> GetOrders()
+        public async Task<ActionResult<IEnumerable<OrderResponse>>> GetOrders()
         {
-            return await _context.Orders.ToListAsync();
+            var orders = await _context.Orders
+                .AsNoTracking()
+                .Select(o => ToResponse(o))
+                .ToListAsync();
+
+            return Ok(orders);
         }
 
         // GET: api/Orders/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Order>> GetOrder(int id)
+        public async Task<ActionResult<OrderResponse>> GetOrder(int id)
         {
-            var order = await _context.Orders.FindAsync(id);
-
+            var order = await _context.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.OrderId == id);
             if (order == null)
             {
                 return NotFound();
             }
 
-            return order;
+            return Ok(ToResponse(order));
         }
 
         // PUT: api/Orders/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutOrder(int id, Order order)
+        public async Task<IActionResult> PutOrder(int id, UpdateOrderRequest request)
         {
-            if (id != order.OrderId)
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            _context.Entry(order).State = EntityState.Modified;
-
-            try
+            var userExists = await _context.Users.AnyAsync(u => u.UserId == request.UserId);
+            if (!userExists)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!OrderExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return BadRequest(new { message = "Invalid user id." });
             }
 
+            order.UserId = request.UserId;
+            order.TotalAmount = request.TotalAmount;
+            order.Status = request.Status.Trim();
+
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
         // POST: api/Orders
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Order>> PostOrder(Order order)
+        public async Task<ActionResult<OrderResponse>> PostOrder(CreateOrderRequest request)
         {
+            var userExists = await _context.Users.AnyAsync(u => u.UserId == request.UserId);
+            if (!userExists)
+            {
+                return BadRequest(new { message = "Invalid user id." });
+            }
+
+            var order = new Order
+            {
+                UserId = request.UserId,
+                TotalAmount = request.TotalAmount,
+                Status = request.Status.Trim(),
+                CreatedAt = DateTime.UtcNow
+            };
+
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetOrder", new { id = order.OrderId }, order);
+            return CreatedAtAction(nameof(GetOrder), new { id = order.OrderId }, ToResponse(order));
         }
 
         // DELETE: api/Orders/5
@@ -99,9 +112,24 @@ namespace backend.Controllers
             return NoContent();
         }
 
-        private bool OrderExists(int id)
+        private static OrderResponse ToResponse(Order order) =>
+            new(order.OrderId, order.UserId, order.TotalAmount, order.Status, order.CreatedAt);
+
+        public record OrderResponse(int OrderId, int? UserId, decimal? TotalAmount, string? Status, DateTime? CreatedAt);
+
+        public class CreateOrderRequest
         {
-            return _context.Orders.Any(e => e.OrderId == id);
+            [Range(1, int.MaxValue)]
+            public int UserId { get; set; }
+
+            [Range(0, 9999999999d)]
+            public decimal TotalAmount { get; set; }
+
+            [Required]
+            [StringLength(50)]
+            public string Status { get; set; } = string.Empty;
         }
+
+        public class UpdateOrderRequest : CreateOrderRequest;
     }
 }

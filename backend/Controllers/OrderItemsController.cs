@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+﻿using System.ComponentModel.DataAnnotations;
+using backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using backend.Models;
 
 namespace backend.Controllers
 {
@@ -20,70 +16,84 @@ namespace backend.Controllers
             _context = context;
         }
 
-        // GET: api/OrderItems
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<OrderItem>>> GetOrderItems()
+        public async Task<ActionResult<IEnumerable<OrderItemResponse>>> GetOrderItems()
         {
-            return await _context.OrderItems.ToListAsync();
+            var orderItems = await _context.OrderItems
+                .AsNoTracking()
+                .Select(oi => ToResponse(oi))
+                .ToListAsync();
+
+            return Ok(orderItems);
         }
 
-        // GET: api/OrderItems/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<OrderItem>> GetOrderItem(int id)
+        public async Task<ActionResult<OrderItemResponse>> GetOrderItem(int id)
         {
-            var orderItem = await _context.OrderItems.FindAsync(id);
-
+            var orderItem = await _context.OrderItems.AsNoTracking().FirstOrDefaultAsync(oi => oi.OrderItemId == id);
             if (orderItem == null)
             {
                 return NotFound();
             }
 
-            return orderItem;
+            return Ok(ToResponse(orderItem));
         }
 
-        // PUT: api/OrderItems/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutOrderItem(int id, OrderItem orderItem)
+        public async Task<IActionResult> PutOrderItem(int id, UpdateOrderItemRequest request)
         {
-            if (id != orderItem.OrderItemId)
+            var orderItem = await _context.OrderItems.FindAsync(id);
+            if (orderItem == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            _context.Entry(orderItem).State = EntityState.Modified;
-
-            try
+            if (!await _context.Orders.AnyAsync(o => o.OrderId == request.OrderId))
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!OrderItemExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return BadRequest(new { message = "Invalid order id." });
             }
 
+            if (!await _context.Products.AnyAsync(p => p.ProductId == request.ProductId))
+            {
+                return BadRequest(new { message = "Invalid product id." });
+            }
+
+            orderItem.OrderId = request.OrderId;
+            orderItem.ProductId = request.ProductId;
+            orderItem.Quantity = request.Quantity;
+            orderItem.Price = request.Price;
+
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
-        // POST: api/OrderItems
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<OrderItem>> PostOrderItem(OrderItem orderItem)
+        public async Task<ActionResult<OrderItemResponse>> PostOrderItem(CreateOrderItemRequest request)
         {
+            if (!await _context.Orders.AnyAsync(o => o.OrderId == request.OrderId))
+            {
+                return BadRequest(new { message = "Invalid order id." });
+            }
+
+            if (!await _context.Products.AnyAsync(p => p.ProductId == request.ProductId))
+            {
+                return BadRequest(new { message = "Invalid product id." });
+            }
+
+            var orderItem = new OrderItem
+            {
+                OrderId = request.OrderId,
+                ProductId = request.ProductId,
+                Quantity = request.Quantity,
+                Price = request.Price
+            };
+
             _context.OrderItems.Add(orderItem);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetOrderItem", new { id = orderItem.OrderItemId }, orderItem);
+            return CreatedAtAction(nameof(GetOrderItem), new { id = orderItem.OrderItemId }, ToResponse(orderItem));
         }
 
-        // DELETE: api/OrderItems/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOrderItem(int id)
         {
@@ -99,9 +109,26 @@ namespace backend.Controllers
             return NoContent();
         }
 
-        private bool OrderItemExists(int id)
+        private static OrderItemResponse ToResponse(OrderItem orderItem) =>
+            new(orderItem.OrderItemId, orderItem.OrderId, orderItem.ProductId, orderItem.Quantity, orderItem.Price);
+
+        public record OrderItemResponse(int OrderItemId, int? OrderId, int? ProductId, int? Quantity, decimal? Price);
+
+        public class CreateOrderItemRequest
         {
-            return _context.OrderItems.Any(e => e.OrderItemId == id);
+            [Range(1, int.MaxValue)]
+            public int OrderId { get; set; }
+
+            [Range(1, int.MaxValue)]
+            public int ProductId { get; set; }
+
+            [Range(1, int.MaxValue)]
+            public int Quantity { get; set; }
+
+            [Range(0, 9999999999d)]
+            public decimal Price { get; set; }
         }
+
+        public class UpdateOrderItemRequest : CreateOrderItemRequest;
     }
 }

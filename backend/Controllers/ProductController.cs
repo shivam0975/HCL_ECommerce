@@ -1,5 +1,5 @@
-﻿using backend.Models;
-using Microsoft.AspNetCore.Http;
+﻿using System.ComponentModel.DataAnnotations;
+using backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,56 +18,64 @@ namespace backend.Controllers
 
         // ✅ GET: api/Product
         [HttpGet("AllProducts")]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+        public async Task<ActionResult<IEnumerable<ProductResponse>>> GetProducts()
         {
-            return await _context.Products.ToListAsync();
+            var products = await _context.Products
+                .AsNoTracking()
+                .Select(p => ToResponse(p))
+                .ToListAsync();
+
+            return Ok(products);
         }
 
         // ✅ GET: api/Product/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Product>> GetProduct(int id)
+        public async Task<ActionResult<ProductResponse>> GetProduct(int id)
         {
-            var product = await _context.Products.FindAsync(id);
-
+            var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.ProductId == id);
             if (product == null)
+            {
                 return NotFound();
+            }
 
-            return product;
+            return Ok(ToResponse(product));
         }
 
         // ✅ POST: api/Product
         [HttpPost]
-        public async Task<ActionResult<Product>> CreateProduct(Product product)
+        public async Task<ActionResult<ProductResponse>> CreateProduct(CreateProductRequest request)
         {
-            product.CreatedAt = DateTime.Now;
+            var product = new Product
+            {
+                Name = request.Name.Trim(),
+                Description = request.Description,
+                Price = request.Price,
+                Stock = request.Stock,
+                CreatedAt = DateTime.UtcNow
+            };
 
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, product);
+            return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, ToResponse(product));
         }
 
         // ✅ PUT: api/Product/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProduct(int id, Product product)
+        public async Task<IActionResult> UpdateProduct(int id, UpdateProductRequest request)
         {
-            if (id != product.ProductId)
-                return BadRequest();
-
-            _context.Entry(product).State = EntityState.Modified;
-
-            try
+            var product = await _context.Products.FindAsync(id);
+            if (product == null)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Products.Any(e => e.ProductId == id))
-                    return NotFound();
-                else
-                    throw;
+                return NotFound();
             }
 
+            product.Name = request.Name.Trim();
+            product.Description = request.Description;
+            product.Price = request.Price;
+            product.Stock = request.Stock;
+
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
@@ -76,14 +84,37 @@ namespace backend.Controllers
         public async Task<IActionResult> DeleteProduct(int id)
         {
             var product = await _context.Products.FindAsync(id);
-
             if (product == null)
+            {
                 return NotFound();
+            }
 
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
+
+        private static ProductResponse ToResponse(Product product) =>
+            new(product.ProductId, product.Name, product.Description, product.Price, product.Stock, product.CreatedAt);
+
+        public record ProductResponse(int ProductId, string? Name, string? Description, decimal? Price, int? Stock, DateTime? CreatedAt);
+
+        public class CreateProductRequest
+        {
+            [Required]
+            [StringLength(150)]
+            public string Name { get; set; } = string.Empty;
+
+            public string? Description { get; set; }
+
+            [Range(0, 9999999999d)]
+            public decimal Price { get; set; }
+
+            [Range(0, int.MaxValue)]
+            public int Stock { get; set; }
+        }
+
+        public class UpdateProductRequest : CreateProductRequest;
     }
 }
